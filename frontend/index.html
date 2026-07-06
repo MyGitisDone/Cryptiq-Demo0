@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q-DAY · Watch a quantum computer break encryption</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-eyebrow">Q-DAY · post-quantum readiness lab</div>
+    <h1 class="hero-title">The lock on the internet<br /><span class="accent-break">has a period.</span></h1>
+    <p class="hero-thesis">
+      Every login, payment and message you send is wrapped in RSA. A quantum
+      computer running Shor's algorithm turns that wrapping into arithmetic it
+      can solve. Below is a real one, running on your machine, doing exactly
+      that — and the lattice-based lock that survives it.
+    </p>
+    <a href="#lab" class="cta">Break something ↓</a>
+  </header>
+
+  <!-- PRIMER -->
+  <section class="primer">
+    <div class="primer-col">
+      <span class="tag tag-danger">Breakable today, in principle</span>
+      <h3>RSA &amp; elliptic-curve</h3>
+      <p>Security comes from a hidden <em>period</em>. Shor's algorithm finds
+        periods in polynomial time. Size is the only thing protecting real keys —
+        and "harvest now, decrypt later" means today's captured traffic is
+        already at risk.</p>
+    </div>
+    <div class="primer-col">
+      <span class="tag tag-safe">Standing after the break</span>
+      <h3>ML-KEM (FIPS&nbsp;203)</h3>
+      <p>Lattice hardness has no period to find. Shor gets no traction; the
+        best-known quantum attack is a modest speedup answered by bigger
+        parameters. This is what your traffic should migrate to.</p>
+    </div>
+  </section>
+
+  <!-- LAB -->
+  <main id="lab" class="lab">
+    <div class="lab-head">
+      <h2>The two-vault test</h2>
+      <p>Store one secret twice — once behind RSA, once behind ML-KEM — then
+        point the quantum computer at both.</p>
+    </div>
+
+    <!-- mode toggle -->
+    <div class="modes">
+      <button class="mode-btn active" data-mode="solo">Solo</button>
+      <button class="mode-btn" data-mode="two">Two-player</button>
+      <span class="mode-hint" id="mode-hint">Seal a secret and break it yourself.</span>
+    </div>
+
+    <!-- SOLO controls -->
+    <div class="controls panel" id="panel-solo">
+      <label class="ctrl"><span>Secret to hide</span>
+        <input id="secret" type="text" maxlength="24" value="LAUNCH" /></label>
+      <label class="ctrl"><span>Key difficulty</span><select id="tier"></select></label>
+      <label class="ctrl"><span>Quantum shots <small id="shots-val">512</small>
+        <button type="button" class="info" data-tip="How many times the circuit is run and measured. Quantum results are probabilistic, so more shots give a cleaner reading of the period.">?</button></span>
+        <input id="shots" type="range" min="128" max="2048" step="128" value="512" /></label>
+      <label class="ctrl"><span>Backend</span><select id="backend"></select></label>
+      <button id="run" class="cta cta-run">Seal &amp; attack</button>
+    </div>
+
+    <!-- TWO-PLAYER -->
+    <div class="panel two-wrap" id="panel-two" hidden>
+      <div class="role-pick" id="role-pick">
+        <button class="role-card" data-role="defender">
+          <span class="role-title">I'm the Defender</span>
+          <span class="role-sub">Create a room, seal a secret, watch it get cracked.</span>
+        </button>
+        <button class="role-card" data-role="attacker">
+          <span class="role-title">I'm the Attacker</span>
+          <span class="role-sub">Join with a room code and break the vault live.</span>
+        </button>
+      </div>
+
+      <!-- defender -->
+      <div class="role-body" id="body-defender" hidden>
+        <div class="room-badge">Room code <strong id="def-code">····</strong>
+          <span class="room-status" id="def-status">creating room…</span></div>
+        <div class="controls">
+          <label class="ctrl"><span>Secret to hide</span>
+            <input id="def-secret" type="text" maxlength="24" value="LAUNCH" /></label>
+          <label class="ctrl"><span>Key difficulty</span><select id="def-tier"></select></label>
+          <button id="def-seal" class="cta cta-run">Seal the vault</button>
+        </div>
+        <p class="hint" id="def-wait" hidden>Share the room code. Waiting for the attacker to strike…</p>
+      </div>
+
+      <!-- attacker -->
+      <div class="role-body" id="body-attacker" hidden>
+        <div class="controls">
+          <label class="ctrl"><span>Room code</span>
+            <input id="atk-code" type="text" maxlength="4" placeholder="ABCD" style="text-transform:uppercase" /></label>
+          <button id="atk-join" class="cta cta-ghost">Join room</button>
+          <label class="ctrl"><span>Quantum shots <small id="atk-shots-val">512</small></span>
+            <input id="atk-shots" type="range" min="128" max="2048" step="128" value="512" /></label>
+          <label class="ctrl"><span>Backend</span><select id="atk-backend"></select></label>
+          <button id="atk-run" class="cta cta-run" disabled>Break it</button>
+        </div>
+        <p class="hint" id="atk-note">Enter the code your Defender gives you.</p>
+      </div>
+    </div>
+
+    <!-- VAULTS (shared) -->
+    <div class="vaults">
+      <section class="vault vault-rsa" id="vault-rsa">
+        <div class="vault-top"><span class="vault-kind" id="rsa-role">Classical vault</span>
+          <span class="vault-algo">RSA</span></div>
+        <dl class="kv" id="rsa-kv"></dl>
+        <div class="hash-row" id="rsa-hash">
+          <span class="hash-label">stored at rest · SHA-256 <em>(survives quantum)</em></span>
+          <code id="rsa-hash-val">—</code>
+        </div>
+        <div class="collapse-field">
+          <div class="collapse-label">encrypted payload · in transit <em>(Shor's target)</em></div>
+          <div class="glyphs" id="rsa-glyphs"></div>
+        </div>
+        <div class="phase" id="phase">
+          <svg viewBox="0 0 120 120" class="phase-ring">
+            <circle class="phase-track" cx="60" cy="60" r="52" />
+            <circle class="phase-arc" id="phase-arc" cx="60" cy="60" r="52" />
+            <line class="phase-needle" id="phase-needle" x1="60" y1="60" x2="60" y2="12" />
+          </svg>
+          <div class="phase-caption"><span id="phase-text">idle</span></div>
+        </div>
+        <div class="verdict" id="rsa-verdict"></div>
+      </section>
+
+      <section class="vault vault-kem" id="vault-kem">
+        <div class="vault-top"><span class="vault-kind" id="kem-role">Quantum-safe vault</span>
+          <span class="vault-algo">ML-KEM</span></div>
+        <dl class="kv" id="kem-kv"></dl>
+        <div class="hash-row hash-row-safe">
+          <span class="hash-label">shared secret · established, never transmitted</span>
+          <code id="kem-secret-val">—</code>
+        </div>
+        <div class="lattice"><canvas id="lattice-canvas"></canvas></div>
+        <div class="verdict" id="kem-verdict"></div>
+      </section>
+    </div>
+
+    <!-- terminal -->
+    <section class="terminal-wrap">
+      <div class="terminal-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="terminal-title">shor@qday — order-finding log</span></div>
+      <pre class="terminal" id="terminal">Awaiting target. Configure a vault above and start the attack.</pre>
+    </section>
+  </main>
+
+  <!-- OUTRO -->
+  <section class="outro" id="outro">
+    <h2 class="outro-line">You just recovered a secret you were never given.</h2>
+    <p>The math you watched run is the same math that factors a real RSA key — the
+      only difference is the number of qubits, and that gap is closing. The
+      encryption you broke here is what currently protects online banking,
+      messaging, VPNs and software updates.</p>
+    <p class="outro-cta">CryptiQ maps where your systems
+      still rely on it, turns that into a board-ready migration plan, and ships the
+      tooling to move you to ML-KEM before Q-Day arrives.</p>
+    <a href="#lab" class="cta cta-ghost">Run it again</a>
+  </section>
+
+  <footer class="foot">Educational proof-of-concept. Tiny keys, real algorithms.
+    Not for production use. Open source — run it yourself.</footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

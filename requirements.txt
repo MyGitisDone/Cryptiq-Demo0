@@ -1,0 +1,14 @@
+# Core
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+
+# Quantum
+qiskit>=1.0
+qiskit-aer>=0.15
+
+# Post-quantum crypto (pure-python ML-KEM / FIPS 203)
+kyber-py>=1.0
+
+# Optional: real IBM Quantum hardware (only needed if BACKEND=ibm)
+# qiskit-ibm-runtime>=0.30
