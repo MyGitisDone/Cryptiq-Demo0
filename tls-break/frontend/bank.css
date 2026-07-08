@@ -1,0 +1,52 @@
+:root {
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --cond: "IBM Plex Sans Condensed", var(--sans);
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --ink: #0f1830; --dim: #5f6b86; --line: #dfe4ee; --card: #fff;
+  --accent: #2b6cff; --accent-ink: #fff; --bg1: #eef2fb; --bg2: #dfe7fb;
+}
+body[data-theme="bad"] { --accent: #e03131; --bg1: #2a0d0d; --bg2: #3a0f12; --ink: #ffe9e9; --dim: #d99; --line: #5a1f22; --card: #1c0e10; }
+body[data-theme="good"] { --accent: #12b886; --bg1: #07231b; --bg2: #0a2b22; --ink: #e7fff5; --dim: #8fceb9; --line: #1d4a3c; --card: #0e1f1a; }
+
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; font-family: var(--sans); color: var(--ink);
+  background: linear-gradient(160deg, var(--bg1), var(--bg2)); transition: background .4s, color .4s; }
+
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; }
+.logo { font-family: var(--cond); font-weight: 700; font-size: 1.35rem; }
+.badge { font-family: var(--mono); font-size: .72rem; padding: 6px 12px; border-radius: 999px; }
+body[data-theme="bad"] .badge { background: #e0313122; color: #ff8a8a; border: 1px solid #e0313155; }
+body[data-theme="good"] .badge { background: #12b88622; color: #6ee7b7; border: 1px solid #12b88655; }
+
+.wrap { max-width: 440px; margin: 4vh auto; padding: 0 20px; }
+.tagline { text-align: center; color: var(--dim); font-size: .96rem; margin-bottom: 22px; font-style: italic; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 24px;
+  box-shadow: 0 24px 60px #0004; }
+.tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+.tab { flex: 1; padding: 10px; border: 1px solid var(--line); background: transparent; color: var(--dim);
+  border-radius: 9px; cursor: pointer; font-family: var(--mono); font-size: .84rem; }
+.tab.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+label { display: block; font-family: var(--mono); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--dim); margin-bottom: 16px; }
+input { display: block; width: 100%; margin-top: 6px; padding: 12px 14px; border-radius: 9px; border: 1px solid var(--line);
+  background: #ffffff08; color: var(--ink); font-size: 1rem; font-family: var(--sans); }
+input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+.primary { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+  font-weight: 600; font-size: 1rem; cursor: pointer; }
+.primary:hover { filter: brightness(1.08); }
+.ghost { background: transparent; border: 1px solid var(--line); color: var(--dim); padding: 8px 14px; border-radius: 9px; cursor: pointer; font-family: var(--mono); font-size: .8rem; }
+.msg { min-height: 20px; margin: 14px 0 0; font-family: var(--mono); font-size: .82rem; }
+.msg.ok { color: #12b886; } .msg.err { color: #e03131; }
+.wire-note { margin-top: 14px; font-family: var(--mono); font-size: .68rem; color: var(--dim); line-height: 1.5; }
+
+.account .acct-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.hello { font-family: var(--mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+.account h2 { font-family: var(--cond); font-size: 1.7rem; margin: 2px 0 0; }
+.balance { text-align: center; padding: 22px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 18px; }
+.balance span { display: block; font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin-bottom: 6px; }
+.balance strong { font-family: var(--cond); font-size: 2.6rem; color: var(--accent); }
+.details { display: grid; gap: 10px; margin: 0 0 20px; }
+.details > div { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding-bottom: 8px; }
+.details dt { font-family: var(--mono); font-size: .78rem; color: var(--dim); margin: 0; }
+.details dd { font-family: var(--mono); font-size: .82rem; margin: 0; }

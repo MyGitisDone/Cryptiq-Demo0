@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bank</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/bank.css" />
+</head>
+<body data-theme="loading">
+  <div class="topbar">
+    <div class="logo" id="logo">🏦 <span id="bank-name">Bank</span></div>
+    <div class="badge" id="theme-badge"></div>
+  </div>
+
+  <main class="wrap">
+    <p class="tagline" id="tagline"></p>
+
+    <!-- AUTH -->
+    <section class="card" id="auth">
+      <div class="tabs">
+        <button class="tab active" data-tab="signin">Sign in</button>
+        <button class="tab" data-tab="signup">Sign up</button>
+      </div>
+      <label>Username<input id="u" autocomplete="off" placeholder="e.g. alice" /></label>
+      <label>Password<input id="p" type="password" placeholder="choose a password" /></label>
+      <button class="primary" id="submit">Sign in</button>
+      <p class="msg" id="msg"></p>
+      <p class="wire-note" id="wire-note"></p>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section class="card account" id="account" hidden>
+      <div class="acct-head">
+        <div>
+          <span class="hello">Signed in as</span>
+          <h2 id="acct-user">—</h2>
+        </div>
+        <button class="ghost" id="logout">Sign out</button>
+      </div>
+      <div class="balance">
+        <span>Available balance</span>
+        <strong id="balance">$0</strong>
+      </div>
+      <dl class="details">
+        <div><dt>Account number</dt><dd id="acct-no">—</dd></div>
+        <div><dt>Routing</dt><dd id="routing">—</dd></div>
+        <div><dt>Opened</dt><dd id="opened">—</dd></div>
+      </dl>
+      <p class="msg" id="acct-msg"></p>
+    </section>
+  </main>
+
+  <script src="/channel.js"></script>
+  <script src="/bank.js"></script>
+</body>
+</html>

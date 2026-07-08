@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q-DAY · Attacker Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body>
+  <div class="bg-wrap" aria-hidden="true">
+    <div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span></div>
+    <div class="grid"></div><div class="grain"></div>
+  </div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <header class="top">
+    <div class="brand">Q-DAY<span>// attacker console</span></div>
+    <div class="status" id="status">connecting…</div>
+    <div class="wallet">💰 Attacker wallet: <strong id="wallet-balance">$0</strong></div>
+    <div class="bank-links">
+      <a id="open-bad" target="_blank" rel="noopener">↗ Bad Insecure Bank</a>
+      <a id="open-good" target="_blank" rel="noopener">↗ Good Secure Bank</a>
+    </div>
+  </header>
+
+  <p class="tagline">
+    Passive tap on the wire. We record every login that crosses it — then factor
+    the weak bank's key with Shor and read the credentials. The safe bank's stay
+    sealed. <em>Harvest now, decrypt later.</em>
+  </p>
+
+  <main class="stage">
+    <!-- live capture -->
+    <section class="panel feed-panel">
+      <div class="panel-head">
+        <span>◉ live capture — <span id="iface">lo0</span></span>
+        <span class="counter" id="counter">0 packets</span>
+      </div>
+      <div class="feed-controls">
+        <div class="filters" id="filters">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="wire">Logins only</button>
+          <button class="chip" data-filter="cracked">Cracked only</button>
+        </div>
+        <div class="feed-buttons">
+          <button class="fbtn" id="pause">⏸ Pause</button>
+          <button class="fbtn" id="clear">🗑 Clear</button>
+        </div>
+      </div>
+      <div class="feed" id="feed"><div class="empty" id="empty">Waiting for traffic… open a bank and sign in.</div></div>
+    </section>
+
+    <!-- loot -->
+    <section class="panel loot-panel">
+      <div class="panel-head"><span>💰 intercepted credentials</span></div>
+      <div class="loot" id="loot"><div class="empty">Nothing yet. Credentials from the <b>Bad Insecure Bank</b> will appear here.</div></div>
+    </section>
+  </main>
+
+  <!-- Shor terminal — hidden until first crack -->
+  <section class="shor-terminal" id="shor-section" hidden>
+    <div class="st-head">
+      <span class="st-title">⚛ Shor's algorithm — live break</span>
+      <span class="st-sub" id="st-sub">intercepted packet → quantum factorization → plaintext</span>
+    </div>
+    <div class="st-body">
+      <pre class="st-pre" id="st-pre"></pre>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Educational proof-of-concept · real Shor on a toy key · the record cipher is a
+    demo stream cipher, not AES · the safe bank stands in for ML-KEM with an
+    unbreakable-at-scale key. Not for production.
+  </footer>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>

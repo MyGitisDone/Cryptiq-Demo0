@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+backend/accounts_bad.json
+backend/accounts_good.json
+Thumbs.db

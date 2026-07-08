@@ -151,7 +151,7 @@ def run_shor(
 ) -> ShorResult:
     """Factor N with Shor's algorithm.
 
-    `sampler(circuit, shots)` runs the circuit on a backend (Aer or IBM) and
+    `sampler(circuit, shots)` runs the circuit on the Aer simulator and
     returns a counts dict {bitstring: count}. This indirection is what lets the
     same algorithm run on a local simulator or real quantum hardware.
     """
