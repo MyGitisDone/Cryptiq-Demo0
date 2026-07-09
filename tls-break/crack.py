@@ -46,8 +46,8 @@ import urllib.request
 N = 15
 e = 3
 # From POST /api/auth request body:
-WRAPPED = "10"
-PAYLOAD = "1ab06ebbc7e194143043f8f9a4f743bd28702f623ed48efbd9f6c01288e5e1dadcbf42199080eb862518"
+WRAPPED = input("What was the wrapped_key?: ")
+PAYLOAD = input("What was payload hex?: ")
 # ──────────────────────────────────────────────────────────────────────────
 
 
