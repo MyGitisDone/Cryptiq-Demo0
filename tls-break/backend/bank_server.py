@@ -1,20 +1,22 @@
 """
-bank_server.py — factory that builds a bank web app. Both banks are the same
-code with different key strength and branding:
+bank_server.py — factory that builds a bank web app. The two banks now run
+genuinely different key-exchange algorithms:
 
-  * Bad Insecure Bank  — tiny RSA modulus (breakable by Shor)
-  * Good Secure Bank    — full-size RSA modulus (stands in for ML-KEM: the demo
-                          keeps a real quantum-safe KEM in the companion
-                          dashboard, and uses an unbreakable-at-scale key here so
-                          the point lands without shipping a browser KEM library)
+  * Bad Insecure Bank  — RSA key transport, deliberately tiny modulus,
+                         breakable by Shor (or brute force, at this size).
+  * Good Secure Bank    — real ML-KEM-768 (FIPS 203), via kyber-py here and
+                         @noble/post-quantum in the browser. Genuinely
+                         quantum-safe, not "RSA but bigger."
 
-Credential traffic (sign up / sign in) is wrapped with the bank's public key on
-the client, so an eavesdropper only sees ciphertext. Everything the attacker
-needs to *try* to break it is exposed at /capture — that's the harvested wire.
+Credential traffic (sign up / sign in) is protected with the negotiated
+session key on the client, so an eavesdropper only sees ciphertext.
+Everything the attacker needs to *try* to break it is exposed at /capture —
+that's the harvested wire.
 """
 
 from __future__ import annotations
 
+import base64
 import time
 from pathlib import Path
 
@@ -29,9 +31,10 @@ FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 
 
 class AuthIn(BaseModel):
-    mode: str                 # "signup" | "signin"
-    wrapped_key: str          # decimal string (may be huge)
-    payload_hex: str          # encrypted "username=..&password=.."
+    mode: str                          # "signup" | "signin"
+    payload_hex: str                   # encrypted "username=..&password=.."
+    wrapped_key: str | None = None     # RSA path: decimal string
+    kem_ct_b64: str | None = None      # ML-KEM path: base64 ciphertext
 
 
 class TokenIn(BaseModel):
@@ -43,16 +46,33 @@ class TransferIn(BaseModel):
     to: str = "attacker@evil.example"
 
 
+class KexIn(BaseModel):
+    ek_b64: str   # browser's ephemeral ML-KEM encapsulation key, base64
+
+
 def make_bank_app(*, theme: str, name: str, tagline: str, store: str,
                   tiny: bool, tier: str = "instant", rsa_bits: int = 2048) -> FastAPI:
     app = FastAPI(title=name)
     bank = Bank(store, name)
-    key = channel.gen_tiny_rsa(tier) if tiny else channel.gen_rsa(rsa_bits)
-    CAPTURE: list[dict] = []   # harvested credential traffic (what's on the wire)
+    CAPTURE: list[dict] = []   # harvested wire traffic
+
+    if tiny:
+        key = channel.gen_tiny_rsa(tier)
+        algorithm = "rsa"
+    else:
+        algorithm = "mlkem"
+        key = None   # the Good bank's server holds no long-term keypair —
+                     # the BROWSER generates an ephemeral ML-KEM keypair each
+                     # session and sends the encapsulation key; the server
+                     # only ever encapsulates against it. This matches how a
+                     # real client-side-ephemeral KEM handshake works and
+                     # means there's no "server private key" to steal at all.
 
     def public_key() -> dict:
-        return {"alg": "RSA (toy)" if tiny else f"RSA-{key['bits']} (ML-KEM in production)",
-                "N": str(key["N"]), "e": key["e"], "bits": key["bits"], "tiny": tiny}
+        if tiny:
+            return {"alg": "RSA (toy)", "N": str(key["N"]), "e": key["e"],
+                    "bits": key["bits"], "tiny": True}
+        return {"alg": "ML-KEM-768", "bits": 1184 * 8, "tiny": False}
 
     @app.get("/api/config")
     def config():
@@ -61,35 +81,56 @@ def make_bank_app(*, theme: str, name: str, tagline: str, store: str,
     @app.get("/certificate")
     def certificate():
         """
-        The bank's public key — served before any login, just like a TLS
-        certificate in a real handshake. An eavesdropper watching the wire
-        gets this for free. N and e are PUBLIC — that's what 'public key' means.
-        The security comes from the fact that factoring N should be hard.
-        For the Bad bank it isn't.
+        RSA path: the bank's public key (N, e), served before any login —
+        just like a TLS certificate. Public by design; the security is
+        supposed to come from factoring N being hard. For the Bad bank it
+        isn't.
+
+        ML-KEM path: there IS no persistent server certificate to publish
+        here, because the Good bank's server has no long-term keypair — the
+        browser generates a fresh ephemeral ML-KEM keypair every session
+        (see /api/kex-init). This endpoint just explains that.
         """
+        if tiny:
+            return {
+                "subject": name, "issuer": f"{name} Self-Signed CA", "algorithm": "RSA",
+                "public_key": {"N": str(key["N"]), "e": key["e"], "bits": key["bits"]},
+                "note": (f"This {key['bits']}-bit modulus is intentionally tiny. "
+                        "A real RSA-2048 cert would have a 617-digit N. "
+                        "Shor's algorithm breaks both — only the qubit count differs."),
+            }
         return {
-            "subject":    name,
-            "issuer":     f"{name} Self-Signed CA",
-            "algorithm":  "RSA",
-            "public_key": {
-                "N": str(key["N"]),
-                "e": key["e"],
-                "bits": key["bits"],
-            },
-            "note": (
-                f"This {key['bits']}-bit modulus is intentionally tiny. "
-                "A real RSA-2048 cert would have a 617-digit N. "
-                "Shor's algorithm breaks both — only the qubit count differs."
-            ) if tiny else (
-                f"This {key['bits']}-bit modulus is full-size. "
-                "Shor's algorithm would need a fault-tolerant quantum computer "
-                "with millions of logical qubits to break it."
-            ),
+            "subject": name, "issuer": f"{name} Self-Signed CA", "algorithm": "ML-KEM-768",
+            "public_key": None,
+            "note": ("This bank has no persistent public key to publish here — the "
+                     "browser generates a fresh ML-KEM-768 keypair every session and "
+                     "sends the encapsulation key directly at login time. Recovering "
+                     "the session's shared secret from a captured (encapsulation key, "
+                     "ciphertext) pair requires breaking Module-LWE, which has no known "
+                     "efficient algorithm, classical or quantum."),
         }
 
     @app.post("/api/auth")
     def auth(msg: AuthIn):
-        session_key = pow(int(msg.wrapped_key), key["d"], key["N"])
+        if tiny:
+            if msg.wrapped_key is None:
+                return {"ok": False, "error": "missing wrapped_key"}
+            session_key = pow(int(msg.wrapped_key), key["d"], key["N"])
+            wire_extra = {"wrapped_key": msg.wrapped_key}
+        else:
+            if msg.kem_ct_b64 is None:
+                return {"ok": False, "error": "missing kem_ct_b64"}
+            # The server has no stored keypair for ML-KEM — the ciphertext in
+            # msg.kem_ct_b64 was already encapsulated by the SERVER against
+            # the browser's ephemeral ek in /api/kex-encaps below, and the
+            # resulting shared secret was returned to the browser then. Here
+            # we just need the SAME shared secret again to decrypt the login,
+            # so we look it up by the ciphertext (acts as a one-time session id).
+            session_key = _MLKEM_SESSIONS.pop(msg.kem_ct_b64, None)
+            if session_key is None:
+                return {"ok": False, "error": "unknown or expired ML-KEM session"}
+            wire_extra = {"kem_ct_b64": msg.kem_ct_b64}
+
         try:
             payload = channel.open_sealed(session_key, msg.payload_hex).decode("utf-8", "replace")
         except Exception as exc:
@@ -100,14 +141,39 @@ def make_bank_app(*, theme: str, name: str, tagline: str, store: str,
         # Harvest the wire (this is what a sniffer records).
         CAPTURE.append({
             "ts": time.time(), "mode": msg.mode, "bank": name, "theme": theme,
-            "N": str(key["N"]), "e": key["e"], "bits": key["bits"], "tiny": tiny,
-            "wrapped_key": msg.wrapped_key, "payload_hex": msg.payload_hex,
+            "tiny": tiny, "algorithm": algorithm,
+            "N": str(key["N"]) if tiny else None, "e": key["e"] if tiny else None,
+            "bits": public_key()["bits"], "payload_hex": msg.payload_hex,
+            **wire_extra,
         })
         del CAPTURE[:-25]
 
         if msg.mode == "signup":
             return bank.signup(username, password)
         return bank.signin(username, password)
+
+    # ── ML-KEM handshake endpoint (Good bank only) ──────────────────────
+    # In-memory map: ciphertext (base64) -> shared_secret bytes, so /api/auth
+    # can look up the right key without the server needing to remember a
+    # per-connection session (this whole demo is stateless HTTP, no cookies
+    # until after login). Entries are popped on use; a background sweep isn't
+    # needed for a demo, but we cap the map size defensively.
+    _MLKEM_SESSIONS: dict[str, bytes] = {}
+
+    class KexIn(BaseModel):
+        ek_b64: str   # browser's ephemeral ML-KEM encapsulation key, base64
+
+    @app.post("/api/kex-encaps")
+    def kex_encaps(msg: KexIn):
+        if tiny:
+            return {"ok": False, "error": "this bank uses RSA, not ML-KEM"}
+        ek = base64.b64decode(msg.ek_b64)
+        shared, ct = channel.mlkem_encaps(ek)
+        ct_b64 = base64.b64encode(ct).decode()
+        _MLKEM_SESSIONS[ct_b64] = shared
+        if len(_MLKEM_SESSIONS) > 50:
+            _MLKEM_SESSIONS.pop(next(iter(_MLKEM_SESSIONS)))
+        return {"ok": True, "ct_b64": ct_b64}
 
     @app.post("/api/account")
     def account(msg: TokenIn):

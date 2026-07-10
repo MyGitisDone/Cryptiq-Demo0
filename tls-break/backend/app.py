@@ -62,8 +62,18 @@ def _crack(entry: dict) -> dict:
 
 @app.get("/api/status")
 def status():
+    # Bank links always point at localhost, never the LAN IP: the browser's
+    # Web Crypto API (crypto.subtle, used by channel.js) only works in a
+    # "secure context" — https, or http://127.0.0.1 / http://localhost.
+    # Opening a bank over the LAN address makes crypto.subtle undefined and
+    # sign-up/sign-in fails with a cryptic "Cannot read properties of
+    # undefined (reading 'digest')" error.
+    def force_localhost(url: str) -> str:
+        import re
+        return re.sub(r"://[^:/]+", "://127.0.0.1", url)
+
     return {"tshark": tshark_available(), "iface": IFACE,
-            "banks": {"bad": BAD_URL, "good": GOOD_URL}}
+            "banks": {"bad": force_localhost(BAD_URL), "good": force_localhost(GOOD_URL)}}
 
 
 @app.get("/api/feed")
@@ -92,12 +102,14 @@ async def feed():
                 except Exception:
                     continue
                 for entry in cap:
-                    kid = (target, entry["ts"], entry["wrapped_key"])
+                    key_material = entry.get("wrapped_key") or entry.get("kem_ct_b64", "")
+                    kid = (target, entry["ts"], key_material)
                     if kid in seen:
                         continue
                     seen.add(kid)
+                    material_preview = str(key_material)[:24]
                     yield ev("wire", bank=target, mode=entry["mode"], tiny=entry["tiny"],
-                             bits=entry["bits"], wrapped_key=str(entry["wrapped_key"])[:24],
+                             bits=entry["bits"], wrapped_key=material_preview,
                              payload_preview=entry["payload_hex"][:32] + "…")
                     if entry["tiny"] and int(entry["N"]) <= MAX_FACTOR_N:
                         res = await asyncio.to_thread(_crack, entry)
@@ -105,11 +117,12 @@ async def feed():
                             yield ev("cracked", bank=target, mode=res["mode"],
                                      factors=res["factors"], username=res["username"],
                                      password=res["password"],
-                                     N=entry["N"], e=entry["e"],
+                                     rsa_N=entry["N"], rsa_e=entry["e"],
                                      wrapped_key=entry["wrapped_key"],
                                      payload_hex=entry["payload_hex"])
                     else:
-                        yield ev("safe", bank=target, bits=entry["bits"])
+                        yield ev("safe", bank=target, bits=entry["bits"],
+                                 algorithm=entry.get("algorithm", "unknown"))
             await asyncio.sleep(1.0)
 
     return StreamingResponse(gen(), media_type="text/event-stream",
@@ -137,6 +150,9 @@ async def drain(req: DrainIn):
     target = "bad" if req.bank == "bad" else "good"
     async with client(url, target) as http:
         cfg = (await http.get("/api/config")).json()
+        if not cfg["key"]["tiny"]:
+            return {"ok": False, "error": "This bank uses ML-KEM — there's no stolen "
+                                          "session key to replay a login with."}
         N, e = int(cfg["key"]["N"]), cfg["key"]["e"]
         s = random.randrange(2, min(N, 2 ** 240))
         wrapped = pow(s, e, N)

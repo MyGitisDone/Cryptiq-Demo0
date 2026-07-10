@@ -1,0 +1,1 @@
+kyber-py>=1.0   # ML-KEM (only needed for the PQC demo mode)

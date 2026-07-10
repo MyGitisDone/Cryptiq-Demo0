@@ -1,0 +1,42 @@
+# Two modes — choose by setting KEX_MODE before running:
+#
+#   KEX_MODE=weak  docker compose up     # classical (breakable)
+#   KEX_MODE=mlkem docker compose up     # quantum-safe
+#
+# Default is weak so the first demo "just works" with no env vars.
+
+x-common: &common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  networks:
+    - demo-net
+  environment:
+    - KEX_MODE=${KEX_MODE:-weak}
+
+services:
+  server:
+    <<: *common
+    container_name: ssh-server
+    hostname: server
+    command: python3 /app/server/server.py
+    volumes:
+      - ./demo-data:/demo-data:ro
+    ports:
+      - "2222:2222"   # exposed so tcpdump on the host can see traffic
+
+  client:
+    <<: *common
+    container_name: ssh-client
+    hostname: client
+    command: sleep infinity   # stays running; you exec into it
+    depends_on:
+      - server
+    environment:
+      - KEX_MODE=${KEX_MODE:-weak}
+      - SSH_HOST=server
+      - SSH_PORT=2222
+
+networks:
+  demo-net:
+    driver: bridge

@@ -65,7 +65,7 @@ function handle(ev) {
         `${ev.bank} · ${ev.mode} · wrapped=${ev.wrapped_key} · enc=${ev.payload_preview} (${ev.bits}-bit key)`); break;
     case "cracked": onCracked(ev); break;
     case "safe":
-      feedLine("safe", "safe", "SAFE", `Good Secure Bank login · ${ev.bits}-bit key — too large to factor. Credentials unrecoverable.`); break;
+      feedLine("safe", "safe", "SAFE", `Good Secure Bank login · real ML-KEM-768 key exchange — no shared secret to recover from the wire. Credentials unrecoverable.`); break;
   }
 }
 
@@ -80,10 +80,10 @@ function buildScript(ev) {
     [300,  "c-amber",  `wrapped_key = "${ev.wrapped_key}"`],
     [600,  "c-coral",  `payload_hex = "${hex40}"`],
     [1000, "c-dim",    ""],
-    [1200, "c-dim",    `# RSA public key from certificate: N=${ev.N}, e=${ev.e}`],
+    [1200, "c-dim",    `# RSA public key from certificate: N=${ev.rsa_N}, e=${ev.rsa_e}`],
     [1700, "c-dim",    "# N is small — running Shor's algorithm on the quantum simulator…"],
     [2200, "c-violet", ">> initialising QPE circuit…"],
-    [2800, "c-violet", `>> superposition of ${Math.max(8, Math.round(Math.log2(ev.N||15)*4))} qubits`],
+    [2800, "c-violet", `>> superposition of ${Math.max(8, Math.round(Math.log2(ev.rsa_N||15)*4))} qubits`],
     [3600, "c-violet", ">> measuring phase register…"],
     [4400, "c-violet", ">> applying continued-fractions expansion…"],
     [5000, "c-amber",  `>> period r found → gcd(a^(r/2)±1, N) → factors: ${ev.factors?.[0]} × ${ev.factors?.[1]}`],
@@ -159,7 +159,7 @@ function onCracked(ev) {
         <div class="wb-row"><span class="wk">wrapped_key</span><span class="wv wv-key">"${ev.wrapped_key ?? "?"}"</span></div>
         <div class="wb-row"><span class="wk">payload_hex</span><span class="wv wv-enc">"${hexPreview}"</span></div>
       </div>
-      <div class="wb-arrow">▼ Shor factors N=${ev.N} = ${ev.factors?.[0]}×${ev.factors?.[1]} → private key recovered → decrypt</div>
+      <div class="wb-arrow">▼ Shor factors N=${ev.rsa_N} = ${ev.factors?.[0]}×${ev.factors?.[1]} → private key recovered → decrypt</div>
       <div class="wb-label wb-label-after">Decrypted plaintext (what the payload actually says):</div>
       <div class="wb-after">${plaintext}</div>
     </div>

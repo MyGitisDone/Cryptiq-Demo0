@@ -2,3 +2,10 @@
 .venv/
 __pycache__/
 .DS_Store
+captures/*.pcap
+captures/*.pcapng
+*.pyc
+venv/
+backend/accounts_bad.json
+backend/accounts_good.json
+Thumbs.db

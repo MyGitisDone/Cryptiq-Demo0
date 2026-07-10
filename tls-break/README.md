@@ -47,11 +47,12 @@ troubleshooting: see **[RUNBOOK.md](RUNBOOK.md)**.
 4. Do the same on the **Good Secure Bank** (a full-size key, standing in for
    a post-quantum key exchange like ML-KEM). Same attack. It just fails.
 
-Every login is genuinely encrypted with a genuine RSA key exchange; the
-browser and server crypto were verified byte-for-byte. What's scaled down is
-the *size* of the Bad bank's key, so a laptop can factor it in seconds — real
-RSA-2048 is identical math at a size no computer can reach yet, which is the
-whole point.
+Every login is genuinely encrypted with a genuine key exchange on both
+banks — real RSA on the Bad bank, real ML-KEM-768 on the Good bank; the
+browser and server crypto were verified byte-for-byte on both paths. What's
+scaled down is the *size* of the Bad bank's RSA key, so a laptop can factor
+it in seconds — real RSA-2048 is identical math at a size no computer can
+reach yet, which is the whole point.
 
 ---
 
@@ -60,17 +61,25 @@ whole point.
 Being upfront about this so nobody mistakes it for more than it is:
 
 - **Real:** the Shor's-algorithm implementation (Qiskit + a local simulator)
-  genuinely factors the modulus; your credentials are genuinely encrypted
-  client-side before they touch the network; capture → recover key → decrypt
-  is exactly the mechanics of a real harvest-now-decrypt-later attack.
+  genuinely factors the Bad bank's modulus; the Good bank runs genuine
+  ML-KEM-768 (FIPS 203) — the browser generates a fresh ephemeral keypair
+  every session via [@noble/post-quantum](https://github.com/paulmillr/noble-post-quantum),
+  and the server runs the matching Python side via `kyber-py`; your
+  credentials are genuinely encrypted client-side before they touch the
+  network on both banks; capture → recover key → decrypt is exactly the
+  mechanics of a real harvest-now-decrypt-later attack.
 - **Scaled down:** the Bad bank's RSA modulus is tiny (e.g. `N = 15`) so the
   simulator can factor it interactively. This is the entire reason to migrate
   *before* quantum hardware catches up to real key sizes — not because the
-  attack is fake, but because it currently only works at toy scale.
+  attack is fake, but because it currently only works at toy scale. The Good
+  bank isn't scaled down at all — ML-KEM-768 here is the same algorithm and
+  parameter set you'd use in production.
 - **Simplified:** the record cipher that protects a login once a key is
   agreed is a transparent SHA-256 stream cipher, not AES-GCM, so there are
   zero heavy cryptographic dependencies. The security a quantum computer
-  threatens lives in the **key exchange**, which is modeled faithfully.
+  threatens lives in the **key exchange**, which is modeled faithfully on
+  both banks — one breakable at its demo scale, one not breakable at any
+  scale by any known algorithm.
 
 See [RUNBOOK.md](RUNBOOK.md) for architecture notes if you want to extend or
 audit this.
